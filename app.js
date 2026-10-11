@@ -49,3 +49,79 @@ async function api(url, opsi = {}) {
 
   return res.status === 204 ? null : res.json();
 }
+
+function populateMatkulSelect(daftarMatkul) {
+  matkulSelect.innerHTML = "";
+  daftarMatkul.forEach((m) => matkulSelect.append(new Option(m.nama, m.nama)));
+  matkulSelect.disabled = false;
+}
+
+function render() {
+  statusBox.innerHTML = "";
+
+  if (state.status === "loading") {
+    const p = document.createElement("p");
+    p.className = "loading-text";
+    p.textContent = "⏳ Memuat tugas dari server…";
+    statusBox.appendChild(p);
+
+    taskList.innerHTML = "";
+    for (let i = 0; i < 3; i++) {
+      const li = document.createElement("li");
+      li.className = "skeleton-item";
+      taskList.appendChild(li);
+    }
+    emptyMessage.hidden = true;
+    counter.textContent = "";
+    return;
+  }
+
+  if (state.status === "error") {
+    const box = document.createElement("div");
+    box.className = "error-box";
+
+    const span = document.createElement("span");
+    span.textContent = "Gagal memuat: " + state.errorMsg;
+
+    const retryBtn = document.createElement("button");
+    retryBtn.type = "button";
+    retryBtn.className = "retry-btn";
+    retryBtn.id = "retry-btn";
+    retryBtn.textContent = "↻ Coba lagi";
+
+    box.appendChild(span);
+    box.appendChild(retryBtn);
+    statusBox.appendChild(box);
+
+    taskList.innerHTML = "";
+    emptyMessage.hidden = true;
+    counter.textContent = "";
+    return;
+  }
+
+  // status === "ready": render daftar tugas ditambahkan di tahap berikutnya.
+}
+
+statusBox.addEventListener("click", (e) => {
+  if (e.target.id === "retry-btn") muatData();
+});
+
+async function muatData() {
+  state.status = "loading";
+  state.errorMsg = "";
+  render();
+
+  try {
+    const [tugas, matkul] = await Promise.all([api("/api/tugas"), api("/api/matkul")]);
+    state.tasks = tugas;
+    populateMatkulSelect(matkul);
+    state.status = "ready";
+  } catch (err) {
+    state.status = "error";
+    state.errorMsg = err.message;
+  }
+
+  render();
+}
+
+muatData();
