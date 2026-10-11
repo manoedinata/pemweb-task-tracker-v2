@@ -160,6 +160,52 @@ function buildTaskItem(task) {
   return li;
 }
 
+function showFormError(message) {
+  if (!message) {
+    formError.hidden = true;
+    formError.textContent = "";
+    return;
+  }
+  formError.hidden = false;
+  formError.textContent = message;
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const judul = judulInput.value.trim();
+  const matkul = matkulSelect.value;
+  const deadline = deadlineInput.value;
+
+  if (judul.length < 3) {
+    showFormError("Judul tugas minimal 3 karakter.");
+    return;
+  }
+
+  if (!deadline) {
+    showFormError("Deadline wajib diisi.");
+    return;
+  }
+
+  showFormError(null);
+  submitBtn.disabled = true;
+  const originalLabel = submitBtn.textContent;
+  submitBtn.textContent = "Menyimpan…";
+
+  try {
+    const baru = await api("/api/tugas", { method: "POST", body: { judul, matkul, deadline } });
+    state.tasks.push(baru);
+    form.reset();
+    judulInput.focus();
+    render();
+  } catch (err) {
+    showFormError(err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalLabel;
+  }
+});
+
 filterButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
     state.filter = btn.dataset.filter;
