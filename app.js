@@ -1,171 +1,51 @@
-// Task Tracker Kuliah — state & DOM refs
+// Task Tracker Kuliah v2 — state & DOM refs
 const form = document.getElementById("task-form");
 const judulInput = document.getElementById("judul");
-const matkulInput = document.getElementById("matkul");
+const matkulSelect = document.getElementById("matkul");
 const deadlineInput = document.getElementById("deadline");
+const submitBtn = document.getElementById("submit-btn");
 const formError = document.getElementById("form-error");
+const actionError = document.getElementById("action-error");
+const searchInput = document.getElementById("search");
+const statusBox = document.getElementById("status-box");
 const taskList = document.getElementById("task-list");
 const emptyMessage = document.getElementById("empty-message");
 const counter = document.getElementById("counter");
 const filterButtons = document.querySelectorAll(".filter-btn");
 
-const STORAGE_KEY = "task-tracker-kuliah";
+const state = {
+  status: "loading", // "loading" | "error" | "ready"
+  errorMsg: "",
+  tasks: [],
+  filter: "semua",
+  search: "",
+};
 
-function loadTasks() {
+// Helper fetch: selalu kirim/terima JSON, lempar Error berisi pesan server.
+async function api(url, opsi = {}) {
+  const init = { method: opsi.method || "GET" };
+  if (opsi.body !== undefined) {
+    init.headers = { "Content-Type": "application/json" };
+    init.body = JSON.stringify(opsi.body);
+  }
+
+  let res;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    res = await fetch(url, init);
   } catch {
-    return [];
-  }
-}
-
-function saveTasks() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-}
-
-let tasks = loadTasks();
-let currentFilter = "semua";
-
-function formatDeadline(dateStr) {
-  const date = new Date(dateStr + "T00:00:00");
-  if (Number.isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function getVisibleTasks() {
-  let visible = tasks;
-  if (currentFilter === "aktif") visible = tasks.filter((t) => !t.selesai);
-  if (currentFilter === "selesai") visible = tasks.filter((t) => t.selesai);
-
-  return [...visible].sort((a, b) => a.deadline.localeCompare(b.deadline));
-}
-
-function render() {
-  const visible = getVisibleTasks();
-
-  taskList.innerHTML = "";
-
-  visible.forEach((task) => {
-    const li = document.createElement("li");
-    li.className = "task-item" + (task.selesai ? " selesai" : "");
-    li.dataset.id = task.id;
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.className = "toggle-checkbox";
-    checkbox.checked = task.selesai;
-
-    const info = document.createElement("div");
-    info.className = "task-info";
-
-    const title = document.createElement("span");
-    title.className = "task-title";
-    title.textContent = task.judul;
-
-    const meta = document.createElement("span");
-    meta.className = "task-meta";
-    meta.textContent = `${task.matkul} · deadline ${formatDeadline(task.deadline)}`;
-
-    info.appendChild(title);
-    info.appendChild(meta);
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.className = "delete-btn";
-    deleteBtn.textContent = "×";
-    deleteBtn.setAttribute("aria-label", "Hapus tugas");
-
-    li.appendChild(checkbox);
-    li.appendChild(info);
-    li.appendChild(deleteBtn);
-
-    taskList.appendChild(li);
-  });
-
-  emptyMessage.hidden = visible.length !== 0;
-
-  const aktifCount = tasks.filter((t) => !t.selesai).length;
-  counter.textContent = `${aktifCount} tugas aktif`;
-}
-
-function showError(message) {
-  if (!message) {
-    formError.hidden = true;
-    formError.textContent = "";
-    return;
-  }
-  formError.hidden = false;
-  formError.textContent = message;
-}
-
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-}
-
-form.addEventListener("submit", (e) => {
-  e.preventDefault();
-
-  const judul = judulInput.value.trim();
-  const matkul = matkulInput.value;
-  const deadline = deadlineInput.value;
-
-  if (judul.length < 3) {
-    showError("Judul tugas minimal 3 karakter.");
-    return;
+    throw new Error("Tidak dapat terhubung ke server. Periksa koneksi internet.");
   }
 
-  if (!deadline) {
-    showError("Deadline wajib diisi.");
-    return;
+  if (!res.ok) {
+    let pesan = `HTTP ${res.status}`;
+    try {
+      const data = await res.json();
+      if (data && data.error) pesan = data.error;
+    } catch {
+      // body bukan JSON, pakai pesan default
+    }
+    throw new Error(pesan);
   }
 
-  showError(null);
-
-  tasks.push({
-    id: generateId(),
-    judul,
-    matkul,
-    deadline,
-    selesai: false,
-  });
-
-  saveTasks();
-  form.reset();
-  judulInput.focus();
-  render();
-});
-
-taskList.addEventListener("click", (e) => {
-  const li = e.target.closest(".task-item");
-  if (!li) return;
-  const id = li.dataset.id;
-
-  if (e.target.classList.contains("delete-btn")) {
-    tasks = tasks.filter((t) => t.id !== id);
-    saveTasks();
-    render();
-    return;
-  }
-
-  if (e.target.classList.contains("toggle-checkbox")) {
-    const task = tasks.find((t) => t.id === id);
-    if (task) task.selesai = e.target.checked;
-    saveTasks();
-    render();
-  }
-});
-
-filterButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    currentFilter = btn.dataset.filter;
-    filterButtons.forEach((b) => b.classList.toggle("on", b === btn));
-    render();
-  });
-});
-
-render();
+  return res.status === 204 ? null : res.json();
+}

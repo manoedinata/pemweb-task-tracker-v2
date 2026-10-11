@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Task Tracker Kuliah</title>
+  <title>Task Tracker Kuliah v2</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <main class="card">
-    <h1>📋 Task Tracker Kuliah</h1>
+    <h1>📋 Task Tracker Kuliah <span class="badge">v2 · REST API</span></h1>
 
     <form id="task-form" novalidate>
       <input
@@ -19,19 +19,22 @@
       />
 
       <div class="form-row">
-        <select id="matkul" name="matkul">
-          <option value="Pemrograman Web">Pemrograman Web</option>
-          <option value="Basis Data">Basis Data</option>
-          <option value="Struktur Data">Struktur Data</option>
-          <option value="Jaringan Komputer">Jaringan Komputer</option>
-          <option value="Lainnya">Lainnya</option>
+        <select id="matkul" name="matkul" disabled>
+          <option value="">Memuat mata kuliah…</option>
         </select>
         <input type="date" id="deadline" name="deadline" />
-        <button type="submit">Tambah</button>
+        <button type="submit" id="submit-btn">Tambah</button>
       </div>
 
       <p id="form-error" class="error" hidden></p>
     </form>
+
+    <input
+      type="search"
+      id="search"
+      class="search-input"
+      placeholder="Cari tugas…"
+    />
 
     <div class="filter-row">
       <div class="filters">
@@ -42,10 +45,14 @@
       <span id="counter"></span>
     </div>
 
+    <p id="action-error" class="error" hidden></p>
+    <div id="status-box" class="status-box"></div>
+
     <ul id="task-list"></ul>
-    <p id="empty-message" class="empty-message" hidden>Belum ada tugas. Tambahkan tugas pertamamu!</p>
+    <p id="empty-message" class="empty-message" hidden>Tidak ada tugas di sini.</p>
   </main>
 
+  <script src="mock-api-kampus.js"></script>
   <script src="app.js" defer></script>
 </body>
 </html>
