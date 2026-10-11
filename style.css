@@ -241,6 +241,10 @@ h1 {
   color: #94a3b8;
 }
 
+.task-item.busy {
+  opacity: 0.55;
+}
+
 .task-meta {
   font-size: 0.8rem;
   color: #64748b;

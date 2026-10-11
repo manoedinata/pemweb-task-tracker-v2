@@ -21,6 +21,8 @@ const state = {
   search: "",
 };
 
+const pendingIds = new Set(); // id tugas yang sedang diproses (cegah double request)
+
 // Helper fetch: selalu kirim/terima JSON, lempar Error berisi pesan server.
 async function api(url, opsi = {}) {
   const init = { method: opsi.method || "GET" };
@@ -124,14 +126,16 @@ function getVisibleTasks() {
 }
 
 function buildTaskItem(task) {
+  const busy = pendingIds.has(task.id);
   const li = document.createElement("li");
-  li.className = "task-item" + (task.selesai ? " selesai" : "");
+  li.className = "task-item" + (task.selesai ? " selesai" : "") + (busy ? " busy" : "");
   li.dataset.id = task.id;
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
   checkbox.className = "toggle-checkbox";
   checkbox.checked = task.selesai;
+  checkbox.disabled = busy;
 
   const info = document.createElement("div");
   info.className = "task-info";
@@ -151,6 +155,7 @@ function buildTaskItem(task) {
   deleteBtn.type = "button";
   deleteBtn.className = "delete-btn";
   deleteBtn.textContent = "×";
+  deleteBtn.disabled = busy;
   deleteBtn.setAttribute("aria-label", "Hapus tugas");
 
   li.appendChild(checkbox);
@@ -229,19 +234,22 @@ taskList.addEventListener("click", async (e) => {
   if (!li) return;
   const id = Number(li.dataset.id);
   const task = state.tasks.find((t) => t.id === id);
-  if (!task) return;
+  if (!task || pendingIds.has(id)) return;
 
   if (e.target.classList.contains("delete-btn")) {
     showActionError(null);
     const snapshot = state.tasks;
+    pendingIds.add(id);
     state.tasks = state.tasks.filter((t) => t.id !== id); // optimistic
     render();
     try {
       await api(`/api/tugas/${id}`, { method: "DELETE" });
     } catch (err) {
       state.tasks = snapshot; // batalkan jika server gagal
-      render();
       showActionError("Gagal menghapus: " + err.message);
+    } finally {
+      pendingIds.delete(id);
+      render();
     }
     return;
   }
@@ -249,6 +257,7 @@ taskList.addEventListener("click", async (e) => {
   if (e.target.classList.contains("toggle-checkbox")) {
     showActionError(null);
     const prevSelesai = task.selesai;
+    pendingIds.add(id);
     task.selesai = e.target.checked; // optimistic
     render();
     try {
@@ -257,8 +266,10 @@ taskList.addEventListener("click", async (e) => {
     } catch (err) {
       task.selesai = prevSelesai; // batalkan jika server gagal
       showActionError("Gagal memperbarui: " + err.message);
+    } finally {
+      pendingIds.delete(id);
+      render();
     }
-    render();
   }
 });
 
