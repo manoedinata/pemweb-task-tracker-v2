@@ -214,6 +214,54 @@ filterButtons.forEach((btn) => {
   });
 });
 
+function showActionError(message) {
+  if (!message) {
+    actionError.hidden = true;
+    actionError.textContent = "";
+    return;
+  }
+  actionError.hidden = false;
+  actionError.textContent = message;
+}
+
+taskList.addEventListener("click", async (e) => {
+  const li = e.target.closest(".task-item");
+  if (!li) return;
+  const id = Number(li.dataset.id);
+  const task = state.tasks.find((t) => t.id === id);
+  if (!task) return;
+
+  if (e.target.classList.contains("delete-btn")) {
+    showActionError(null);
+    const snapshot = state.tasks;
+    state.tasks = state.tasks.filter((t) => t.id !== id); // optimistic
+    render();
+    try {
+      await api(`/api/tugas/${id}`, { method: "DELETE" });
+    } catch (err) {
+      state.tasks = snapshot; // batalkan jika server gagal
+      render();
+      showActionError("Gagal menghapus: " + err.message);
+    }
+    return;
+  }
+
+  if (e.target.classList.contains("toggle-checkbox")) {
+    showActionError(null);
+    const prevSelesai = task.selesai;
+    task.selesai = e.target.checked; // optimistic
+    render();
+    try {
+      const updated = await api(`/api/tugas/${id}`, { method: "PATCH", body: { selesai: task.selesai } });
+      Object.assign(task, updated);
+    } catch (err) {
+      task.selesai = prevSelesai; // batalkan jika server gagal
+      showActionError("Gagal memperbarui: " + err.message);
+    }
+    render();
+  }
+});
+
 statusBox.addEventListener("click", (e) => {
   if (e.target.id === "retry-btn") muatData();
 });
