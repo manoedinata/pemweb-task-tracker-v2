@@ -99,8 +99,74 @@ function render() {
     return;
   }
 
-  // status === "ready": render daftar tugas ditambahkan di tahap berikutnya.
+  // status === "ready"
+  const visible = getVisibleTasks();
+
+  taskList.innerHTML = "";
+  visible.forEach((task) => taskList.appendChild(buildTaskItem(task)));
+  emptyMessage.hidden = visible.length !== 0;
+
+  const aktifCount = state.tasks.filter((t) => !t.selesai).length;
+  counter.textContent = `${aktifCount} tugas aktif`;
 }
+
+function getVisibleTasks() {
+  let visible = state.tasks;
+
+  if (state.filter === "aktif") visible = visible.filter((t) => !t.selesai);
+  if (state.filter === "selesai") visible = visible.filter((t) => t.selesai);
+
+  if (state.search) {
+    visible = visible.filter((t) => t.judul.toLowerCase().includes(state.search));
+  }
+
+  return [...visible].sort((a, b) => a.deadline.localeCompare(b.deadline));
+}
+
+function buildTaskItem(task) {
+  const li = document.createElement("li");
+  li.className = "task-item" + (task.selesai ? " selesai" : "");
+  li.dataset.id = task.id;
+
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.className = "toggle-checkbox";
+  checkbox.checked = task.selesai;
+
+  const info = document.createElement("div");
+  info.className = "task-info";
+
+  const title = document.createElement("span");
+  title.className = "task-title";
+  title.textContent = task.judul;
+
+  const meta = document.createElement("span");
+  meta.className = "task-meta";
+  meta.textContent = `${task.matkul} · deadline ${task.deadline}`;
+
+  info.appendChild(title);
+  info.appendChild(meta);
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.className = "delete-btn";
+  deleteBtn.textContent = "×";
+  deleteBtn.setAttribute("aria-label", "Hapus tugas");
+
+  li.appendChild(checkbox);
+  li.appendChild(info);
+  li.appendChild(deleteBtn);
+
+  return li;
+}
+
+filterButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    state.filter = btn.dataset.filter;
+    filterButtons.forEach((b) => b.classList.toggle("on", b === btn));
+    render();
+  });
+});
 
 statusBox.addEventListener("click", (e) => {
   if (e.target.id === "retry-btn") muatData();
