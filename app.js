@@ -295,4 +295,13 @@ async function muatData() {
   render();
 }
 
+let searchTimer = null;
+searchInput.addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    state.search = searchInput.value.trim().toLowerCase();
+    if (state.status === "ready") render();
+  }, 300);
+});
+
 muatData();
